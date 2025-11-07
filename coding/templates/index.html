@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MQTT Data Stream</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
+        h1 { color: #333; }
+        #messages { list-style-type: none; padding: 0; }
+        #messages li { 
+            background: #fff; 
+            margin-bottom: 8px; 
+            padding: 12px; 
+            border-radius: 4px; 
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+        }
+        #messages li strong { color: #007BFF; }
+    </style>
+</head>
+<body>
+    <h1>MQTT Real-time Data</h1>
+    <ul id="messages">
+        <li>Waiting for data...</li>
+    </ul>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.4/socket.io.js"></script>
+    
+    <script type="text/javascript">
+        // Connect to the Socket.IO server (your Flask app)
+        var socket = io();
+
+        // This function is called when the server emits an 'mqtt_message' event
+        socket.on('mqtt_message', function(data) {
+            console.log('Received message:', data);
+            
+            var messagesList = document.getElementById('messages');
+            var firstMessage = messagesList.querySelector('li');
+
+            // Remove the "Waiting for data..." message if it's still there
+            if (firstMessage && firstMessage.innerText === 'Waiting for data...') {
+                messagesList.removeChild(firstMessage);
+            }
+            
+            // Create a new list item for the message
+            var newItem = document.createElement('li');
+            newItem.innerHTML = `<strong>Topic:</strong> ${data.topic} 
+            | <strong>device_id:</strong> ${data.device_id}
+            | <strong>date:</strong> ${data.date}
+            | <strong>time:</strong> ${data.time}
+            | <strong>lat:</strong> ${data.lat}
+            | <strong>lon:</strong> ${data.lon}
+            | <strong>temp:</strong> ${data.battery}
+            `;
+            
+            // Add the new message to the top of the list
+            messagesList.prepend(newItem);
+        });
+
+        // Log connection status
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+        socket.on('disconnect', function() {
+            console.log('Disconnected from server');
+        });
+    </script>
+</body>
+</html>
