@@ -7,6 +7,25 @@
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f4f4f4; }
         h1 { color: #333; }
+
+        /* --- Style for the new Download Button --- */
+        #download-btn {
+            display: inline-block;
+            margin-top: 10px;
+            margin-bottom: 20px;
+            padding: 10px 15px;
+            background-color: #28a745; /* Green */
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9em;
+        }
+
+        #download-btn:hover {
+            background-color: #218838;
+        }
+        
         #messages { list-style-type: none; padding: 0; }
         #messages li { 
             background: #fff; 
@@ -20,6 +39,10 @@
 </head>
 <body>
     <h1>MQTT Real-time Data</h1>
+
+    <!-- --- The new Download Button --- -->
+    <a href="/download" id="download-btn">Download GPS Log (CSV)</a>
+
     <ul id="messages">
         <li>Waiting for data...</li>
     </ul>
