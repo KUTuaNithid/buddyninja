@@ -17,6 +17,9 @@ const char* ntpServer = "pool.ntp.org";
 const long  gmtOffset_sec = 7 * 60 * 60; // Thailand is UTC+7
 const int   daylightOffset_sec = 0;
 
+// --- Publish time window config (hours, 24h) ---
+const int PUBLISH_ALLOW_START_HOUR = 6;  // 06:00
+const int PUBLISH_ALLOW_END_HOUR   = 18; // 18:00 (12 hours window)
 
 WiFiClient wifiClient;
 PubSubClient mqttClient(wifiClient);
@@ -51,6 +54,33 @@ String make_payload_hex(double lon, double lat, int batt){
   char buf[10];
   snprintf(buf, sizeof(buf), "%04X%04X%02X", lon16, lat16, batt8);
   return String(buf);
+}
+
+bool checkPublishPeriod(){
+
+  bool publishAllowed = false;
+
+  // Get local time to decide if publishing is allowed
+  struct tm timeinfo;
+  if (getLocalTime(&timeinfo)) {
+    int curMinutes = timeinfo.tm_hour * 60 + timeinfo.tm_min;
+    int startMinutes = PUBLISH_ALLOW_START_HOUR * 60;
+    int endMinutes = PUBLISH_ALLOW_END_HOUR * 60;
+
+    if (startMinutes <= endMinutes) {
+      // normal (same-day) window, e.g. 06:00 - 18:00
+      publishAllowed = (curMinutes >= startMinutes && curMinutes < endMinutes);
+    } else {
+      // wrap-around window (e.g. 20:00 - 04:00)
+      publishAllowed = (curMinutes >= startMinutes) || (curMinutes < endMinutes);
+    }
+  } else {
+    // Couldn't get time; be conservative and disallow publish
+    publishAllowed = false;
+    Serial.println("Time not available, skipping publish window check");
+  }
+
+  return publishAllowed;
 }
 
 /* ----------------- MQTT helpers ----------------- */
@@ -310,7 +340,7 @@ void setup(){
 }
 
 unsigned long lastPublish = 0;
-const unsigned long PUBLISH_INTERVAL_MS = 5000;
+const unsigned long PUBLISH_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
 void loop()
 {
@@ -336,16 +366,26 @@ void loop()
 
     // Publish telemetry periodically (example)
     unsigned long now = millis();
+    bool publishAllowed = checkPublishPeriod();
+
+    // Only update lastPublish and attempt actual publish when inside allowed window
     if (now - lastPublish >= PUBLISH_INTERVAL_MS)
     {
-        lastPublish = now;
-        if (mqttClient.connected())
+        if (!publishAllowed)
         {
-            publishTelemetry();
+            Serial.println("Outside allowed publish window, skipping publish");
         }
         else
         {
-            Serial.println("MQTT not connected, skipping publish");
+            lastPublish = now;
+            if (mqttClient.connected())
+            {
+                publishTelemetry();
+            }
+            else
+            {
+                Serial.println("MQTT not connected, skipping publish");
+            }
         }
     }
 
